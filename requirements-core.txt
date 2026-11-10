@@ -1,0 +1,15 @@
+# Minimum needed to RUN the project (train + API + dashboard). Used by run.sh / run.bat.
+# Full list incl. optional extras (QR, screenshots, Streamlit, tests): requirements.txt
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+matplotlib>=3.8.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+dnspython>=2.6.0
+python-Levenshtein>=0.25.0
+ipwhois>=1.2.0
+python-dotenv>=1.0.0
+flask>=3.0.0
+flask-cors>=4.0.0

@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "UPI & Aadhaar Phishing Guard",
+  "version": "0.1.0",
+  "description": "Warns when a page looks like UPI/Aadhaar phishing. URLs are sent ONLY to your own local backend (localhost:5050), never to a third party.",
+  "permissions": ["webNavigation", "storage", "activeTab"],
+  "host_permissions": ["http://localhost:5050/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Check this page", "default_popup": "popup.html" }
+}

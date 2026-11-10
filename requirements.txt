@@ -1,0 +1,58 @@
+# UPI Phishing Detector — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# ─── Core ML ─────────────────────────────────────────────────────────────────
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# ─── Web Scraping & HTTP ─────────────────────────────────────────────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0               # faster HTML parser for BeautifulSoup
+urllib3>=2.0.0
+dnspython>=2.6.0          # DNS TTL lookup + MX record check
+python-Levenshtein>=0.25.0 # edit distance for typosquatting detection
+ipwhois>=1.2.0            # ASN reputation lookup
+schedule>=1.2.0           # automated nightly retraining pipeline
+
+# ─── QR Code Detection ───────────────────────────────────────────────────────
+pyzbar>=0.1.9             # QR code decoding (also: sudo apt install libzbar0)
+Pillow>=10.2.0            # image processing for QR + visual similarity
+
+# ─── Visual Similarity (optional — requires Chrome installed) ─────────────────
+selenium>=4.18.0          # headless browser for screenshots
+imagehash>=4.3.1          # perceptual hashing for visual clone detection
+
+# ─── Automated Retraining ─────────────────────────────────────────────────────
+
+# ─── Data Viz & Dashboard ────────────────────────────────────────────────────
+matplotlib>=3.8.0
+plotly>=5.18.0
+streamlit>=1.32.0
+
+# ─── Utilities ───────────────────────────────────────────────────────────────
+tqdm>=4.66.0              # progress bars for batch processing
+python-dateutil>=2.9.0    # flexible date parsing for WHOIS responses
+joblib>=1.3.0             # model serialisation (scikit-learn uses this internally)
+python-dotenv>=1.0.0      # loads .env file for API keys (see .env.example)
+
+# ─── API Server (for HTML frontend) ──────────────────────────────
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# ─── Testing ─────────────────────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-cov>=4.1.0
+
+# ─── Optional: GeoIP for hosting country detection ───────────────────────────
+# Uncomment if you want accurate hosting country detection.
+# Download free GeoLite2-City.mmdb from https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+# geoip2>=4.8.0
+
+# ─── Optional: Screenshot-based perceptual hashing ───────────────────────────
+# For advanced HTML similarity using visual page screenshots.
+# Requires Chrome/Chromium installed separately.
+# selenium>=4.18.0
+# Pillow>=10.2.0
+# imagehash>=4.3.1

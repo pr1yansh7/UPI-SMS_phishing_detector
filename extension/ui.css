@@ -1,0 +1,10 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #0a0e1a; color: #e2e8f0; }
+body.popup { width: 340px; } body.warn { display: grid; place-items: center; min-height: 100vh; }
+.card { padding: 20px 24px; max-width: 560px; } .big { font-size: 3rem; }
+h1 { font-size: 1.2rem; margin: 6px 0 10px; } h2 { font-size: 0.95rem; margin-top: 22px; }
+.url { word-break: break-all; font-family: monospace; font-size: 0.82rem; background: #111827; padding: 8px 10px; border-radius: 6px; }
+.muted { color: #94a3b8; } .small { font-size: 0.72rem; } ul { color: #f59e0b; line-height: 1.6; }
+.verdict.bad { color: #ff4b6e; font-weight: 700; } .verdict.ok { color: #10b981; font-weight: 700; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+button { border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+.primary { background: #00d4aa; color: #0a0e1a; } .ghost { background: transparent; color: #94a3b8; border: 1px solid #1e2d47; }

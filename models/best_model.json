@@ -1,0 +1,57 @@
+{
+  "feature_set": "lexical",
+  "columns": [
+    "url_length",
+    "dot_count",
+    "digit_ratio",
+    "special_char_count",
+    "subdomain_depth",
+    "has_ip_address",
+    "has_at_symbol",
+    "url_entropy",
+    "path_depth",
+    "has_double_slash_in_path",
+    "has_non_standard_port",
+    "sensitive_query_params",
+    "phish_keyword_count",
+    "suspicious_tld",
+    "brand_in_subdomain",
+    "brand_in_path",
+    "brand_in_hostname",
+    "min_brand_edit_distance",
+    "has_homograph_chars",
+    "is_punycode_domain",
+    "has_https",
+    "is_url_shortener"
+  ],
+  "best_model": "Random Forest",
+  "n_rows": 52,
+  "n_train": 41,
+  "n_test": 11,
+  "class_counts": {
+    "1": 32,
+    "0": 20
+  },
+  "test_split_csv": "data/test_split.csv",
+  "trained_at": "2026-11-07T11:34:18.388975+00:00",
+  "metrics": {
+    "Random Forest": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "roc_auc": 1.0,
+      "cv_f1_mean": 0.9556,
+      "cv_f1_std": 0.0544
+    },
+    "Logistic Regression": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "roc_auc": 1.0,
+      "cv_f1_mean": 0.9378,
+      "cv_f1_std": 0.0812
+    }
+  }
+}

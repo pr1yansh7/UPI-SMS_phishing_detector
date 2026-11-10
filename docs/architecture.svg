@@ -1,0 +1,219 @@
+<svg viewBox="0 0 960 640" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#00d4aa"/>
+    </marker>
+    <marker id="arrow-muted" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a6080"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="640" fill="#0a0e1a"/>
+  <!-- Grid lines -->
+  <line x1="0" y1="0" x2="960" y2="0" stroke="#1e2d47" stroke-width="0.5" stroke-dasharray="4,8"/>
+  <line x1="0" y1="160" x2="960" y2="160" stroke="#1e2d47" stroke-width="0.5" stroke-dasharray="4,8"/>
+  <line x1="0" y1="320" x2="960" y2="320" stroke="#1e2d47" stroke-width="0.5" stroke-dasharray="4,8"/>
+  <line x1="0" y1="480" x2="960" y2="480" stroke="#1e2d47" stroke-width="0.5" stroke-dasharray="4,8"/>
+
+  <!-- Title -->
+  <text x="480" y="36" text-anchor="middle" fill="#00d4aa" font-size="18" font-weight="700" letter-spacing="1">UPI PHISHING DETECTOR — SYSTEM ARCHITECTURE</text>
+  <text x="480" y="54" text-anchor="middle" fill="#4a6080" font-size="11">38-feature ML pipeline · India-specific · Real-time detection</text>
+
+  <!-- ═══ ROW 1: Data Sources ═══ -->
+  <text x="480" y="82" text-anchor="middle" fill="#4a6080" font-size="10" letter-spacing="2">DATA SOURCES</text>
+
+  <!-- OpenPhish -->
+  <rect x="40" y="90" width="120" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="100" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">OpenPhish</text>
+  <text x="100" y="126" text-anchor="middle" fill="#64748b" font-size="9">Live feed</text>
+  <text x="100" y="138" text-anchor="middle" fill="#64748b" font-size="9">~1500 URLs/day</text>
+
+  <!-- PhishTank -->
+  <rect x="180" y="90" width="120" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="240" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">PhishTank</text>
+  <text x="240" y="126" text-anchor="middle" fill="#64748b" font-size="9">Verified crowd</text>
+  <text x="240" y="138" text-anchor="middle" fill="#64748b" font-size="9">sourced dataset</text>
+
+  <!-- Manual Seeds -->
+  <rect x="320" y="90" width="120" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="380" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">Manual Seeds</text>
+  <text x="380" y="126" text-anchor="middle" fill="#64748b" font-size="9">UPI-specific</text>
+  <text x="380" y="138" text-anchor="middle" fill="#64748b" font-size="9">phishing lures</text>
+
+  <!-- CERT-In -->
+  <rect x="460" y="90" width="120" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="520" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">CERT-In</text>
+  <text x="520" y="126" text-anchor="middle" fill="#64748b" font-size="9">India national</text>
+  <text x="520" y="138" text-anchor="middle" fill="#64748b" font-size="9">CSIRT advisories</text>
+
+  <!-- Google Safe Browsing -->
+  <rect x="600" y="90" width="140" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="670" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">Google Safe Browsing</text>
+  <text x="670" y="126" text-anchor="middle" fill="#64748b" font-size="9">Threat intelligence</text>
+  <text x="670" y="138" text-anchor="middle" fill="#64748b" font-size="9">blocklist API</text>
+
+  <!-- WhoisXML -->
+  <rect x="760" y="90" width="140" height="52" rx="8" fill="#111827" stroke="#1e2d47" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="830" y="111" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">WhoisXML API</text>
+  <text x="830" y="126" text-anchor="middle" fill="#64748b" font-size="9">Domain registration</text>
+  <text x="830" y="138" text-anchor="middle" fill="#64748b" font-size="9">age lookup</text>
+
+  <!-- Arrows: sources → collector -->
+  <line x1="100" y1="142" x2="100" y2="166" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="240" y1="142" x2="220" y2="166" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="380" y1="142" x2="340" y2="166" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="520" y1="142" x2="460" y2="166" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="142" x2="580" y2="166" stroke="#4a6080" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+  <line x1="830" y1="142" x2="700" y2="166" stroke="#4a6080" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+
+  <!-- ═══ ROW 2: collector.py ═══ -->
+  <rect x="40" y="168" width="280" height="56" rx="8" fill="#1a2235" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="60" y="189" fill="#00d4aa" font-size="12" font-weight="700">collector.py</text>
+  <text x="60" y="204" fill="#64748b" font-size="9.5">Fetches · Filters by UPI keywords · Deduplicates</text>
+  <text x="60" y="217" fill="#64748b" font-size="9.5">Outputs → data/raw_urls.csv  (labelled dataset)</text>
+
+  <!-- ═══ ROW 2: Feature Extractor ═══ -->
+  <rect x="340" y="168" width="580" height="56" rx="8" fill="#1a2235" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="360" y="189" fill="#00d4aa" font-size="12" font-weight="700">feature_extractor.py  (assembler only — no logic)</text>
+  <text x="360" y="204" fill="#64748b" font-size="9.5">Calls one function per feature · Shares HTML fetch across all HTML functions</text>
+  <text x="360" y="217" fill="#64748b" font-size="9.5">Returns dict of 38 values aligned to FEATURE_COLUMNS in config.py</text>
+
+  <!-- Arrow: collector → trainer -->
+  <line x1="180" y1="224" x2="180" y2="248" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Arrow: extractor → trainer -->
+  <line x1="630" y1="224" x2="630" y2="248" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ═══ ROW 3: Feature Groups ═══ -->
+  <text x="480" y="244" text-anchor="middle" fill="#4a6080" font-size="10" letter-spacing="2">FEATURE GROUPS  (38 total — each group is one isolated file)</text>
+
+  <!-- Group A -->
+  <rect x="30" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#2196F3" stroke-width="1.2"/>
+  <text x="95" y="271" text-anchor="middle" fill="#2196F3" font-size="10" font-weight="700">A · URL Structure</text>
+  <text x="95" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">13 features</text>
+  <text x="95" y="296" text-anchor="middle" fill="#4a6080" font-size="8">length, entropy, path,</text>
+  <text x="95" y="307" text-anchor="middle" fill="#4a6080" font-size="8">port, keywords, params</text>
+  <text x="95" y="318" text-anchor="middle" fill="#374151" font-size="7.5">url_features.py</text>
+
+  <!-- Group B -->
+  <rect x="172" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#9C27B0" stroke-width="1.2"/>
+  <text x="237" y="271" text-anchor="middle" fill="#9C27B0" font-size="10" font-weight="700">B · Domain Intel</text>
+  <text x="237" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">7 features</text>
+  <text x="237" y="296" text-anchor="middle" fill="#4a6080" font-size="8">age, TLD, brand,</text>
+  <text x="237" y="307" text-anchor="middle" fill="#4a6080" font-size="8">edit dist, homograph</text>
+  <text x="237" y="318" text-anchor="middle" fill="#374151" font-size="7.5">domain_features.py</text>
+
+  <!-- Group C -->
+  <rect x="314" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#FF9800" stroke-width="1.2"/>
+  <text x="379" y="271" text-anchor="middle" fill="#FF9800" font-size="10" font-weight="700">C · SSL / TLS</text>
+  <text x="379" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">4 features</text>
+  <text x="379" y="296" text-anchor="middle" fill="#4a6080" font-size="8">HTTPS, cert age,</text>
+  <text x="379" y="307" text-anchor="middle" fill="#4a6080" font-size="8">self-signed, trusted CA</text>
+  <text x="379" y="318" text-anchor="middle" fill="#374151" font-size="7.5">ssl_features.py</text>
+
+  <!-- Group D -->
+  <rect x="456" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#E91E63" stroke-width="1.2"/>
+  <text x="521" y="271" text-anchor="middle" fill="#E91E63" font-size="10" font-weight="700">D · HTML Content</text>
+  <text x="521" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">7 features</text>
+  <text x="521" y="296" text-anchor="middle" fill="#4a6080" font-size="8">forms, passwords,</text>
+  <text x="521" y="307" text-anchor="middle" fill="#4a6080" font-size="8">favicon, mismatch</text>
+  <text x="521" y="318" text-anchor="middle" fill="#374151" font-size="7.5">html_features.py</text>
+
+  <!-- Group E -->
+  <rect x="598" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#00BCD4" stroke-width="1.2"/>
+  <text x="663" y="271" text-anchor="middle" fill="#00BCD4" font-size="10" font-weight="700">E · Network</text>
+  <text x="663" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">4 features</text>
+  <text x="663" y="296" text-anchor="middle" fill="#4a6080" font-size="8">redirects, hosting,</text>
+  <text x="663" y="307" text-anchor="middle" fill="#4a6080" font-size="8">ASN, MX record</text>
+  <text x="663" y="318" text-anchor="middle" fill="#374151" font-size="7.5">network_features.py</text>
+
+  <!-- Group F -->
+  <rect x="740" y="252" width="130" height="68" rx="6" fill="#111827" stroke="#4CAF50" stroke-width="1.2"/>
+  <text x="805" y="271" text-anchor="middle" fill="#4CAF50" font-size="10" font-weight="700">F · OSINT / Intel</text>
+  <text x="805" y="284" text-anchor="middle" fill="#64748b" font-size="8.5">3 features</text>
+  <text x="805" y="296" text-anchor="middle" fill="#4a6080" font-size="8">shortener, DNS TTL,</text>
+  <text x="805" y="307" text-anchor="middle" fill="#4a6080" font-size="8">Google Safe Browsing</text>
+  <text x="805" y="318" text-anchor="middle" fill="#374151" font-size="7.5">osint_features.py</text>
+
+  <!-- Arrows: groups → trainer -->
+  <line x1="95"  y1="320" x2="330" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+  <line x1="237" y1="320" x2="360" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+  <line x1="379" y1="320" x2="420" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+  <line x1="521" y1="320" x2="490" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+  <line x1="663" y1="320" x2="560" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+  <line x1="805" y1="320" x2="630" y2="376" stroke="#1e2d47" stroke-width="1" marker-end="url(#arrow-muted)"/>
+
+  <!-- ═══ ROW 4: Trainer + Thresholds ═══ -->
+  <!-- trainer.py -->
+  <rect x="40" y="378" width="540" height="62" rx="8" fill="#1a2235" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="60" y="398" fill="#00d4aa" font-size="12" font-weight="700">trainer.py</text>
+  <text x="60" y="413" fill="#64748b" font-size="9.5">Random Forest (n=200, balanced) + Logistic Regression · 5-fold CV</text>
+  <text x="60" y="426" fill="#64748b" font-size="9.5">Outputs: models/best_model.pkl · results/*.png (ROC, confusion matrix, feature importance)</text>
+
+  <!-- thresholds.py -->
+  <rect x="596" y="378" width="322" height="62" rx="8" fill="#1a2235" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="616" y="398" fill="#f59e0b" font-size="12" font-weight="700">thresholds.py</text>
+  <text x="616" y="413" fill="#64748b" font-size="9.5">SUSPICIOUS_HIGH / SUSPICIOUS_LOW sets</text>
+  <text x="616" y="426" fill="#64748b" font-size="9.5">FEATURE_WARN_THRESHOLDS · is_feature_suspicious()</text>
+
+  <!-- Arrows: trainer → outputs -->
+  <line x1="310" y1="440" x2="200" y2="466" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="310" y1="440" x2="480" y2="466" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="757" y1="440" x2="757" y2="466" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ═══ ROW 5: Outputs / Interfaces ═══ -->
+  <text x="480" y="462" text-anchor="middle" fill="#4a6080" font-size="10" letter-spacing="2">INTERFACES</text>
+
+  <!-- predictor.py CLI -->
+  <rect x="40" y="470" width="180" height="62" rx="8" fill="#111827" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="130" y="491" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">predictor.py</text>
+  <text x="130" y="506" text-anchor="middle" fill="#64748b" font-size="9">CLI tool</text>
+  <text x="130" y="519" text-anchor="middle" fill="#64748b" font-size="9">Single URL · Batch</text>
+  <text x="130" y="530" text-anchor="middle" fill="#374151" font-size="8">python predictor.py --url …</text>
+
+  <!-- api.py Flask -->
+  <rect x="238" y="470" width="180" height="62" rx="8" fill="#111827" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="328" y="491" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">api.py</text>
+  <text x="328" y="506" text-anchor="middle" fill="#64748b" font-size="9">Flask REST API</text>
+  <text x="328" y="519" text-anchor="middle" fill="#64748b" font-size="9">POST /predict · GET /health</text>
+  <text x="328" y="530" text-anchor="middle" fill="#374151" font-size="8">localhost:5050</text>
+
+  <!-- index.html -->
+  <rect x="436" y="470" width="180" height="62" rx="8" fill="#111827" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="526" y="491" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">index.html + static/</text>
+  <text x="526" y="506" text-anchor="middle" fill="#64748b" font-size="9">Browser dashboard</text>
+  <text x="526" y="519" text-anchor="middle" fill="#64748b" font-size="9">Demo + ML mode</text>
+  <text x="526" y="530" text-anchor="middle" fill="#374151" font-size="8">style.css · scoring.js · app.js</text>
+
+  <!-- dashboard.py -->
+  <rect x="634" y="470" width="180" height="62" rx="8" fill="#111827" stroke="#00d4aa" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="724" y="491" text-anchor="middle" fill="#00d4aa" font-size="11" font-weight="700">dashboard.py</text>
+  <text x="724" y="506" text-anchor="middle" fill="#64748b" font-size="9">Streamlit dashboard</text>
+  <text x="724" y="519" text-anchor="middle" fill="#64748b" font-size="9">Batch upload · Charts</text>
+  <text x="724" y="530" text-anchor="middle" fill="#374151" font-size="8">streamlit run dashboard.py</text>
+
+  <!-- thresholds used by all interfaces -->
+  <line x1="757" y1="470" x2="724" y2="466" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="757" y1="466" x2="526" y2="466" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="757" y1="466" x2="328" y2="466" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="757" y1="466" x2="130" y2="466" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="130" y1="466" x2="130" y2="470" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrow)"/>
+  <line x1="328" y1="466" x2="328" y2="470" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrow)"/>
+  <line x1="526" y1="466" x2="526" y2="470" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrow)"/>
+  <line x1="724" y1="466" x2="724" y2="470" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="40" y="568" width="880" height="58" rx="6" fill="#111827" stroke="#1e2d47" stroke-width="1"/>
+  <text x="60" y="585" fill="#4a6080" font-size="9" font-weight="700" letter-spacing="1">LEGEND</text>
+  <line x1="120" y1="581" x2="155" y2="581" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="160" y="585" fill="#64748b" font-size="9">Data / model flow</text>
+  <line x1="280" y1="581" x2="315" y2="581" stroke="#4a6080" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+  <text x="320" y="585" fill="#64748b" font-size="9">Optional / API call</text>
+  <line x1="450" y1="581" x2="485" y2="581" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="490" y="585" fill="#64748b" font-size="9">Threshold import (thresholds.py → all interfaces)</text>
+  <text x="60" y="604" fill="#4a6080" font-size="8.5">Each coloured box = one isolated file. If a bug occurs, open only that file. config.py · .env · data/ · models/ · results/ · tests/ not shown.</text>
+  <text x="60" y="617" fill="#374151" font-size="8">Features A–F: url_features.py · domain_features.py · ssl_features.py · html_features.py · network_features.py · osint_features.py</text>
+</svg>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Possible phishing page</title>
+<link rel="stylesheet" href="ui.css"></head>
+<body class="warn">
+  <div class="card">
+    <div class="big">🚨</div>
+    <h1>This page looks like phishing</h1>
+    <p class="muted">Likely impersonating a UPI or Aadhaar service. Do not enter your UPI PIN, OTP, Aadhaar number or card details.</p>
+    <p class="url" id="url"></p>
+    <p>Risk score: <strong id="prob"></strong></p>
+    <ul id="flags"></ul>
+    <div class="row">
+      <button id="close" class="primary">Close this tab (safe)</button>
+      <button id="proceed" class="ghost">Open anyway — this site, 1 hour</button>
+    </div>
+    <h2>Already entered details or lost money?</h2>
+    <div id="report"></div>
+    <p class="muted small">This is an automated guess from a student project — it can be wrong. Confirm on the official site if unsure.</p>
+  </div>
+  <script src="config.js"></script>
+  <script src="logic.js"></script>
+  <script src="warning.js"></script>
+</body></html>

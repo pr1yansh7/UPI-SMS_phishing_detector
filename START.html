@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🛡️ UPI &amp; Aadhaar Phishing Detector</title>
+<!--
+  index.html — STRUCTURE ONLY (the single source for page layout).
+  START.html is GENERATED from this file + static/*.css|js by build_start.py (`make build`).
+
+    static/style.css      → colours, layout
+    static/upi-config.js  → AUTO-GENERATED from config.py (`make sync-js`) — don't hand-edit
+    static/scoring.js     → URL heuristic scoring (demo mode) + official-domain allowlist
+    static/messages.js    → SMS / WhatsApp / UPI-link rules (port of the Python analysers)
+    static/app.js         → rendering, history, message checker UI
+    static/api-status.js  → backend status bar
+  If you add/rename an element id here, update the matching getElementById() in app.js.
+-->
+<style>
+/* ════════════════════════════════════════════════════════════════════════
+   style.css — ALL visual styling for the UPI Phishing Detector dashboard.
+
+   Edit THIS file for:
+     - Colors, fonts, spacing, layout
+     - Card/button/table appearance
+     - Animations
+
+   Do NOT edit index.html for styling changes — index.html only contains
+   structure (HTML elements) and links to this file.
+   ════════════════════════════════════════════════════════════════════════ */
+
+  /* ── Design tokens ─────────────────────────────────────────── */
+  :root {
+    --bg:        #0a0e1a;
+    --surface:   #111827;
+    --surface2:  #1a2235;
+    --border:    #1e2d47;
+    --accent:    #00d4aa;
+    --danger:    #ff4b6e;
+    --warn:      #f59e0b;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --safe:      #10b981;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --radius:    10px;
+    --glow-safe: 0 0 24px rgba(0,212,170,0.18);
+    --glow-danger: 0 0 24px rgba(255,75,110,0.22);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Scanline grid background ──────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ────────────────────────────────────────────────── */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── Header ────────────────────────────────────────────────── */
+  header {
+    padding: 36px 0 28px;
+    display: flex; align-items: center; gap: 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .logo-shield {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), #0099cc);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: var(--glow-safe);
+  }
+  .brand h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand p  { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.25);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Input panel ───────────────────────────────────────────── */
+  .input-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+  .input-label {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .url-row { display: flex; gap: 10px; }
+  .url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .url-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,170,0.1); }
+  .url-input::placeholder { color: var(--muted); }
+  .btn-analyse {
+    background: var(--accent);
+    color: #0a0e1a;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    white-space: nowrap;
+  }
+  .btn-analyse:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .btn-analyse:disabled { opacity: 0.4; cursor: not-allowed; }
+  .examples {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px;
+  }
+  .example-chip {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .example-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .example-chip.phish { border-color: rgba(255,75,110,0.35); color: var(--danger); }
+  .example-chip.phish:hover { border-color: var(--danger); }
+
+  /* ── Result section ────────────────────────────────────────── */
+  #result { display: none; }
+  .result-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 700px) { .result-grid { grid-template-columns: 1fr; } }
+
+  /* Verdict card */
+  .verdict-card {
+    border-radius: var(--radius);
+    border: 1.5px solid;
+    padding: 28px 20px;
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    position: relative; overflow: hidden;
+  }
+  .verdict-card.phishing {
+    background: rgba(255,75,110,0.06);
+    border-color: var(--danger);
+    box-shadow: var(--glow-danger);
+  }
+  .verdict-card.legit {
+    background: rgba(0,212,170,0.06);
+    border-color: var(--accent);
+    box-shadow: var(--glow-safe);
+  }
+  .verdict-icon { font-size: 2.8rem; line-height: 1; }
+  .verdict-label {
+    font-size: 1.2rem; font-weight: 800; letter-spacing: 0.04em;
+    font-family: var(--font-mono);
+  }
+  .verdict-card.phishing .verdict-label { color: var(--danger); }
+  .verdict-card.legit    .verdict-label { color: var(--accent); }
+  .verdict-conf { font-size: 0.78rem; color: var(--muted); }
+  .verdict-conf strong { color: var(--text); font-size: 1rem; }
+
+  /* Probability meter */
+  .prob-bar-wrap { width: 100%; margin-top: 6px; }
+  .prob-bar-track {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .prob-bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.8s cubic-bezier(.22,1,.36,1);
+    background: linear-gradient(90deg, var(--safe), var(--warn), var(--danger));
+  }
+  .prob-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem; color: var(--muted); margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+
+  /* Flags */
+  .flags-wrap { margin-top: 10px; width: 100%; }
+  .flags-title { font-size: 0.68rem; color: var(--muted); margin-bottom: 6px; text-align: left; }
+  .flag-pill {
+    display: inline-block;
+    font-size: 0.65rem; font-family: var(--font-mono);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--warn);
+    padding: 2px 7px; border-radius: 4px;
+    margin: 2px;
+  }
+
+  /* ── Feature table ──────────────────────────────────────────── */
+  .features-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .features-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .features-scroll { max-height: 370px; overflow-y: auto; }
+  .features-scroll::-webkit-scrollbar { width: 4px; }
+  .features-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 0.67rem; font-family: var(--font-mono);
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 8px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface);
+  }
+  tbody tr { border-bottom: 1px solid rgba(30,45,71,0.5); transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr.warn { background: rgba(245,158,11,0.05); }
+  tbody tr.warn:hover { background: rgba(245,158,11,0.09); }
+  td {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+  }
+  td:first-child { color: var(--muted); }
+  td:nth-child(2) { color: var(--text); }
+  .status-ok   { color: var(--safe); }
+  .status-warn { color: var(--warn); }
+
+  /* ── Feature bar chart ─────────────────────────────────────── */
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .chart-title {
+    font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--accent); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .bar-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 7px; font-size: 0.72rem; font-family: var(--font-mono);
+  }
+  .bar-name { width: 195px; color: var(--muted); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; height: 14px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(.22,1,.36,1); }
+  .bar-fill.ok   { background: rgba(16,185,129,0.7); }
+  .bar-fill.warn { background: rgba(255,75,110,0.75); }
+  .bar-val { width: 44px; color: var(--muted); font-size: 0.68rem; }
+
+  /* ── History ───────────────────────────────────────────────── */
+  .history-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 28px;
+    margin-bottom: 40px;
+  }
+  .history-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--accent); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .clear-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; padding: 3px 10px; font-size: 0.7rem;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .history-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 11px 20px;
+    border-bottom: 1px solid rgba(30,45,71,0.5);
+    font-size: 0.78rem; font-family: var(--font-mono);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .history-row:last-child { border-bottom: none; }
+  .history-row:hover { background: var(--surface2); }
+  .h-icon { font-size: 1rem; flex-shrink: 0; }
+  .h-url  { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .h-label { font-weight: 700; flex-shrink: 0; }
+  .h-label.phishing { color: var(--danger); }
+  .h-label.legit    { color: var(--accent); }
+  .h-prob { color: var(--muted); font-size: 0.68rem; flex-shrink: 0; }
+  .empty-history { padding: 28px; text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+  /* ── Spinner ───────────────────────────────────────────────── */
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(0,212,170,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Demo mode banner ──────────────────────────────────────── */
+  .demo-banner {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 0.75rem; color: var(--warn);
+    margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* fade-in */
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ── Extra styles for START.html ─────────────────────────────── */
+.api-status-bar {
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:10px 16px;
+  font-size:0.75rem; font-family:var(--font-mono); margin-bottom:20px;
+}
+.api-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; animation:pulse 2s infinite; }
+.api-dot.online  { background:var(--safe); }
+.api-dot.offline { background:var(--muted); animation:none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.api-label { color:var(--text); }
+.api-mode  { color:var(--muted); margin-left:auto; }
+.how-to-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-bottom:20px; }
+.how-to-box summary { cursor:pointer; color:var(--accent); font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.06em; text-transform:uppercase; list-style:none; display:flex; align-items:center; gap:8px; }
+.how-to-box summary::before { content:"▸"; }
+.how-to-box[open] summary::before { content:"▾"; }
+.how-to-steps { margin-top:12px; color:var(--muted); line-height:1.9; font-size:0.78rem; }
+.how-to-steps code { background:var(--surface2); color:var(--accent); padding:1px 6px; border-radius:4px; font-family:var(--font-mono); font-size:0.85em; }
+.how-to-steps strong { color:var(--text); }
+.example-group-label { font-size:0.68rem; color:var(--muted); font-family:var(--font-mono); align-self:center; padding-right:4px; }
+.example-group-label.phish { color:var(--danger); }
+.example-group-label.legit { color:var(--safe); }
+
+/* ── Message / link checker + Report panel ───────────────────────────── */
+.msg-tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.msg-tab { background:var(--surface2); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:8px 16px; font-size:0.8rem; cursor:pointer; font-family:var(--font-mono); }
+.msg-tab.active { border-color:var(--accent); color:var(--accent); }
+.msg-hint { font-size:0.74rem; color:var(--muted); margin-bottom:10px; }
+.msg-textarea, .msg-sender { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:0.82rem; padding:12px; outline:none; margin-bottom:10px; }
+.msg-textarea { min-height:90px; resize:vertical; }
+.msg-flags { margin:10px 0 0 18px; font-size:0.8rem; color:var(--warn); line-height:1.7; }
+.msg-meta { font-size:0.74rem; color:var(--muted); font-family:var(--font-mono); margin-top:8px; }
+.msg-advice { font-size:0.76rem; color:var(--muted); margin-top:10px; line-height:1.6; }
+.msg-disclaimer { font-size:0.68rem; color:var(--muted); margin-top:8px; }
+.msg-details summary { cursor:pointer; font-size:0.72rem; color:var(--accent); font-family:var(--font-mono); margin-top:12px; }
+.report-panel { background:rgba(255,75,110,0.06); border:1px solid rgba(255,75,110,0.35); border-radius:10px; padding:16px 18px; margin-top:14px; }
+.report-title { color:var(--danger); font-weight:700; font-size:0.85rem; margin-bottom:10px; }
+.report-row { margin-bottom:10px; }
+.report-name { font-size:0.8rem; }
+.report-when { font-size:0.72rem; color:var(--muted); line-height:1.5; }
+.report-note { font-size:0.66rem; color:var(--muted); margin-top:8px; }
+.report-panel a { color:var(--accent); }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-shield">🛡️</div>
+    <div class="brand">
+      <h1>UPI &amp; Aadhaar Phishing Detector</h1>
+      <p>39 URL features · SMS · WhatsApp · UPI links · India-specific</p>
+    </div>
+    <span class="header-badge" id="modelBadge">Heuristic mode</span>
+  </header>
+
+  <!-- API status bar -->
+  <div class="api-status-bar">
+    <div class="api-dot offline" id="apiDot"></div>
+    <span class="api-label" id="apiLabel">Checking for ML backend…</span>
+    <span class="api-mode"  id="apiMode"></span>
+  </div>
+
+  <!-- Setup guide -->
+  <details class="how-to-box">
+    <summary>How to enable full ML predictions (trained Random Forest)</summary>
+    <div class="how-to-steps">
+      <strong>Right now:</strong> Working in heuristic mode — scores URLs
+      using 38 weighted rules directly in your browser. No setup needed.<br><br>
+
+      <strong>Easiest:</strong> double-click <code>run.bat</code> (Windows) or run <code>./run.sh</code> (Mac/Linux) — it installs, trains, starts the backend and opens this page.<br><br>
+      <strong>Or manually (one-time, ~5 min):</strong><br>
+      1. Open a terminal in the project folder<br>
+      2. Run: <code>./setup.sh</code> &nbsp;(Mac/Linux) &nbsp;or&nbsp; <code>setup.bat</code> &nbsp;(Windows)<br>
+      3. Train: <code>python trainer.py --raw data/sample_urls.csv</code><br>
+      4. Start API: <code>python api.py</code> &nbsp;← keep this terminal open<br>
+      5. Refresh this page — status bar turns green automatically<br><br>
+
+      <strong>Every day after that:</strong><br>
+      <code>source venv/bin/activate &amp;&amp; python api.py</code> → refresh page
+    </div>
+  </details>
+
+  <!-- Input panel -->
+  <div class="input-panel">
+    <label class="input-label" for="urlInput">▸ Enter URL to analyse (UPI or Aadhaar)</label>
+    <div class="url-row">
+      <input class="url-input" id="urlInput" type="url"
+        placeholder="http://uidai-update-kyc.xyz  or  http://phonepe-kyc.xyz  or  https://uidai.gov.in/"
+        autocomplete="off" spellcheck="false"/>
+      <div class="spinner" id="spinner"></div>
+      <button class="btn-analyse" id="analyseBtn" onclick="analyse()">Analyse</button>
+    </div>
+
+    <div class="examples">
+      <!-- UPI phishing examples -->
+      <span class="example-group-label phish">UPI 🚨</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://phonepe-upi-kyc-verify.xyz/login?otp=123')">phonepe-upi-kyc-verify.xyz</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://gpay-reward-claim.online/cashback')">gpay-reward-claim.online</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://paytm-secure-update.click/otp-verify')">paytm-secure-update.click</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('https://bit.ly/3upiPhish')">bit.ly shortener</span>
+
+      <!-- UPI legit examples -->
+      <span class="example-group-label legit">UPI ✅</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://www.phonepe.com/')">phonepe.com</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://paytm.com/')">paytm.com</span>
+    </div>
+
+    <div class="examples" style="margin-top:8px;">
+      <!-- Aadhaar phishing examples -->
+      <span class="example-group-label phish">Aadhaar 🚨</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://uidai-update-kyc.xyz/verify')">uidai-update-kyc.xyz</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://aadhaar-card-download.tk/login')">aadhaar-card-download.tk</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://aadhar-link-mobile.online/otp')">aadhar-link-mobile.online</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://maadhaar-biometric.xyz/update')">maadhaar-biometric.xyz</span>
+
+      <!-- Aadhaar legit examples -->
+      <span class="example-group-label legit">Aadhaar ✅</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://uidai.gov.in/')">uidai.gov.in</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://resident.uidai.gov.in/')">resident.uidai.gov.in</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://digilocker.gov.in/')">digilocker.gov.in</span>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="result-grid fade-in">
+      <div class="verdict-card" id="verdictCard">
+        <div class="verdict-icon"  id="verdictIcon"></div>
+        <div class="verdict-label" id="verdictLabel"></div>
+        <div class="verdict-conf">
+          Phishing probability<br>
+          <strong id="verdictProb"></strong>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-bar-track">
+            <div class="prob-bar-fill" id="probBar" style="width:0%"></div>
+          </div>
+          <div class="prob-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+        </div>
+        <div class="flags-wrap" id="flagsWrap"></div>
+      </div>
+      <div class="features-card">
+        <div class="features-head">
+          <span>Feature Breakdown (38 features)</span>
+          <span id="flagCount" style="color:var(--warn)"></span>
+        </div>
+        <div class="features-scroll">
+          <table>
+            <thead><tr><th>Feature</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody id="featureBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="chart-section fade-in" id="chartSection"></div>
+    <div id="reportPanel"></div>
+  </div>
+
+
+  <!-- Message / link checker -->
+  <div class="history-section" style="margin-top:20px;">
+    <div class="history-head"><span>🔎 Check a message or link</span></div>
+    <div style="padding:20px;">
+      <div class="msg-tabs" id="msgTabs">
+        <button class="msg-tab active" data-mode="sms" onclick="setMsgMode('sms')">📱 SMS</button>
+        <button class="msg-tab" data-mode="whatsapp" onclick="setMsgMode('whatsapp')">💬 WhatsApp</button>
+        <button class="msg-tab" data-mode="upi" onclick="setMsgMode('upi')">💸 UPI link</button>
+      </div>
+      <div class="msg-hint" id="msgHint"></div>
+      <textarea id="msgText" class="msg-textarea" placeholder="Paste here…"></textarea>
+      <input id="msgSender" class="msg-sender" type="text" placeholder="Sender ID (optional, e.g. VK-UIDAI)"/>
+      <div class="examples" id="msgExamples"></div>
+      <button class="btn-analyse" style="margin-top:12px;" onclick="analyseMessage()">Check</button>
+      <div id="msgResult" style="margin-top:16px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="history-head">
+      <span>Recent Predictions</span>
+      <button class="clear-btn" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="historyList">
+      <div class="empty-history">No predictions yet — analyse a URL above.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   upi-config.js — AUTO-GENERATED from config.py by tools/sync_js_config.py
+   DO NOT EDIT BY HAND. To change a brand / keyword / pattern list:
+     1. edit config.py
+     2. run:  make sync-js      (or: python tools/sync_js_config.py)
+   ════════════════════════════════════════════════════════════════════════ */
+
+const API_BASE = 'http://localhost:5050';
+const PHISH_THRESHOLD = 0.6;
+const WA_PHISHING_THRESHOLD = 0.35;
+
+const UPI_BRANDS = [
+  "phonepe",
+  "gpay",
+  "paytm",
+  "bhim",
+  "amazonpay",
+  "mobikwik",
+  "freecharge",
+  "npci",
+  "upi",
+  "uidai",
+  "aadhar",
+  "aadhaar",
+  "maadhaar",
+  "digilocker",
+  "eaadhaar",
+  "resident"
+];
+
+const REAL_UPI_DOMAINS = [
+  "phonepe.com",
+  "pay.google.com",
+  "paytm.com",
+  "bhimupi.org.in",
+  "pay.amazon.in",
+  "mobikwik.com",
+  "freecharge.in",
+  "npci.org.in",
+  "uidai.gov.in",
+  "resident.uidai.gov.in",
+  "digilocker.gov.in",
+  "maadhaar.uidai.gov.in"
+];
+
+const SUSPICIOUS_TLDS = [
+  ".bid",
+  ".buzz",
+  ".cf",
+  ".click",
+  ".fun",
+  ".ga",
+  ".gq",
+  ".icu",
+  ".link",
+  ".live",
+  ".loan",
+  ".ml",
+  ".online",
+  ".pw",
+  ".site",
+  ".tk",
+  ".top",
+  ".win",
+  ".xyz"
+];
+
+const PHISH_KEYWORDS = [
+  "verify",
+  "secure",
+  "update",
+  "login",
+  "signin",
+  "account",
+  "alert",
+  "suspend",
+  "block",
+  "urgent",
+  "confirm",
+  "validate",
+  "wallet",
+  "kyc",
+  "otp",
+  "pin",
+  "reward",
+  "cashback",
+  "refund",
+  "upi",
+  "payment",
+  "pay",
+  "bhim",
+  "phonepe",
+  "gpay",
+  "paytm",
+  "aadhaar",
+  "aadhar",
+  "uidai",
+  "biometric",
+  "enrollment",
+  "enrolment",
+  "ekyc",
+  "eaadhaar",
+  "maadhaar",
+  "digilocker",
+  "linked",
+  "link-aadhaar",
+  "aadhaar-card",
+  "download-aadhaar",
+  "update-aadhaar",
+  "aadhaar-update",
+  "aadhaar-link",
+  "aadhaar-mobile",
+  "aadhaar-bank"
+];
+
+const URL_SHORTENERS = [
+  "adf.ly",
+  "bc.vc",
+  "bit.ly",
+  "buff.ly",
+  "cutt.ly",
+  "goo.gl",
+  "is.gd",
+  "ow.ly",
+  "rebrand.ly",
+  "s.id",
+  "short.io",
+  "shorte.st",
+  "t.co",
+  "tiny.cc",
+  "tinyurl.com"
+];
+
+const OFFICIAL_DOMAINS = [
+  "phonepe.com",
+  "paytm.com",
+  "pay.google.com",
+  "bhimupi.org.in",
+  "pay.amazon.in",
+  "mobikwik.com",
+  "freecharge.in",
+  "npci.org.in",
+  "uidai.gov.in",
+  "digilocker.gov.in",
+  "onlinesbi.sbi",
+  "sbi.co.in",
+  "hdfcbank.com",
+  "icicibank.com"
+];
+
+const SMS_URL_PATTERN = "https?://\\S+|www\\.\\S+|bit\\.ly/\\S+|tinyurl\\.com/\\S+";
+
+const SMS_OTP_REQUEST_PATTERNS = [
+  "share\\s+(?:your\\s+)?otp",
+  "send\\s+(?:the\\s+)?otp",
+  "give\\s+(?:your\\s+)?otp",
+  "provide\\s+(?:the\\s+)?otp",
+  "enter\\s+otp\\s+on",
+  "otp\\s+(?:ko\\s+)?(?:share|send|de\\s+do|batao)"
+];
+
+const SMS_ACCOUNT_THREAT_PATTERNS = [
+  "account\\s+(?:will\\s+be\\s+)?(?:blocked|suspended|deactivated|closed)",
+  "(?:upi|aadhaar|card)\\s+(?:will\\s+be\\s+)?(?:blocked|suspended|deactivated)",
+  "(?:block|suspend|deactivate)\\s+(?:your\\s+)?(?:account|aadhaar|upi)",
+  "service\\s+(?:will\\s+be\\s+)?(?:suspended|stopped|blocked)",
+  "(?:खाता|सेवा)\\s+(?:बंद|ब्लॉक)"
+];
+
+const SMS_PHISH_KEYWORDS = [
+  "click here",
+  "verify now",
+  "update aadhaar",
+  "link aadhaar",
+  "otp expired",
+  "account blocked",
+  "kyc pending",
+  "kyc update",
+  "upi blocked",
+  "reactivate",
+  "re-activate",
+  "cashback credited",
+  "prize won",
+  "lucky winner",
+  "claim reward",
+  "refund initiated",
+  "download aadhaar",
+  "biometric update",
+  "aadhaar link mobile",
+  "share otp",
+  "enter otp",
+  "do not share",
+  "never share"
+];
+
+const SMS_URGENCY_PHRASES = [
+  "immediately",
+  "urgent",
+  "last chance",
+  "expire",
+  "suspended",
+  "blocked",
+  "within 24 hours",
+  "action required",
+  "verify now",
+  "do not ignore",
+  "final warning",
+  "account will be closed",
+  "service discontinued",
+  "last opportunity",
+  "act now"
+];
+
+const SMS_FAKE_SENDER_IDS = [
+  "UIDAI-",
+  "NPCI-",
+  "PAYTM-",
+  "PHONEPE-",
+  "GPAY-",
+  "BHIM-",
+  "BANKOF",
+  "SBIBANK",
+  "HDFCBK",
+  "ICICI-",
+  "GOVIND",
+  "INCGOV",
+  "GOVINDIA"
+];
+
+const SMS_PHISH_KEYWORDS_HINDI = [
+  "खाता",
+  "बंद",
+  "तुरंत",
+  "सत्यापन",
+  "ओटीपी",
+  "आधार",
+  "अपडेट",
+  "पुरस्कार",
+  "कैशबैक",
+  "लिंक करें",
+  "बैंक खाता",
+  "जल्दी करें"
+];
+
+const SMS_PHISH_KEYWORDS_TAMIL = [
+  "கணக்கு",
+  "தடுக்கப்பட்டது",
+  "சரிபார்க்க",
+  "ஆதார்",
+  "புதுப்பிக்க",
+  "பரிசு",
+  "இப்போதே",
+  "OTP உள்ளிடவும்"
+];
+
+const SMS_PHISH_KEYWORDS_TELUGU = [
+  "ఖాతా",
+  "బ్లాక్",
+  "వెంటనే",
+  "ధృవీకరించు",
+  "ఆధార్",
+  "నవీకరించు",
+  "బహుమతి"
+];
+
+const SMS_PHISH_KEYWORDS_BENGALI = [
+  "অ্যাকাউন্ট",
+  "ব্লক",
+  "যাচাই",
+  "আধার",
+  "আপডেট",
+  "পুরস্কার",
+  "এখনই",
+  "OTP দিন"
+];
+
+const WA_URL_PATTERN = "https?://[^\\s<>\"']+|www\\.[^\\s<>\"']+|\\b(?:bit\\.ly|tinyurl\\.com|t\\.co|wa\\.me|chat\\.whatsapp\\.com|t\\.me)/[^\\s<>\"']+";
+
+const UPI_LINK_PATTERN = "upi://[^\\s\"'<>]+";
+
+const WA_PATTERNS = {
+  "lottery_prize": [
+    "you\\s+(?:have|'ve)\\s+won",
+    "lucky\\s+draw",
+    "\\blottery\\b",
+    "\\bkbc\\b",
+    "prize\\s+money",
+    "congratulations[^.!\\n]{0,40}\\b(?:won|winner|selected)\\b"
+  ],
+  "forward_chain": [
+    "forward\\s+(?:this|it)\\s+to",
+    "share\\s+(?:this\\s+)?(?:message\\s+)?with\\s+\\d+",
+    "send\\s+(?:this\\s+)?to\\s+(?:all|\\d+)",
+    "forwarded\\s+many\\s+times",
+    "share\\s+with\\s+all\\s+(?:your\\s+)?(?:contacts|friends|groups)"
+  ],
+  "fake_job": [
+    "work\\s+from\\s+home",
+    "part[\\s-]?time\\s+job",
+    "(?:earn|income)[^.\\n]{0,25}(?:₹|rs\\.?|inr)\\s?\\d[\\d,]*[^.\\n]{0,20}(?:daily|per\\s+day|a\\s+day|/day)",
+    "(?:daily|per\\s+day)[^.\\n]{0,20}(?:₹|rs\\.?|inr)\\s?\\d[\\d,]*",
+    "like\\s+(?:and|&)\\s+subscribe[^.\\n]{0,40}(?:earn|pay)"
+  ],
+  "apk_download": [
+    "\\.apk\\b",
+    "download[^.\\n]{0,30}\\bapp\\b[^.\\n]{0,60}(?:challan|kyc|bill|kisan|ration|update|reward)"
+  ],
+  "govt_lure": [
+    "pm[\\s-]?kisan",
+    "ration\\s+card",
+    "gas\\s+subsidy",
+    "free\\s+(?:laptop|recharge|ration|gas|scooty|mobile)",
+    "government\\s+scheme[^.\\n]{0,30}(?:free|benefit|apply)"
+  ],
+  "utility_threat": [
+    "electricity\\s+bill[^.\\n]{0,60}(?:disconnect|cut|tonight|today)",
+    "power\\s+(?:supply\\s+)?will\\s+be\\s+(?:cut|disconnected)",
+    "(?:sim|number)\\s+will\\s+be\\s+(?:blocked|deactivated|disconnected)",
+    "e-?challan",
+    "traffic\\s+challan",
+    "rto\\s+challan",
+    "parcel[^.\\n]{0,40}(?:held|customs|pending)"
+  ],
+  "group_invite": [
+    "chat\\.whatsapp\\.com/",
+    "\\bt\\.me/",
+    "telegram\\.me/"
+  ],
+  "otp_request": [
+    "share\\s+(?:your\\s+)?otp",
+    "send\\s+(?:the\\s+)?otp",
+    "give\\s+(?:your\\s+)?otp",
+    "provide\\s+(?:the\\s+)?otp",
+    "enter\\s+otp\\s+on",
+    "otp\\s+(?:ko\\s+)?(?:share|send|de\\s+do|batao)"
+  ],
+  "account_threat": [
+    "account\\s+(?:will\\s+be\\s+)?(?:blocked|suspended|deactivated|closed)",
+    "(?:upi|aadhaar|card)\\s+(?:will\\s+be\\s+)?(?:blocked|suspended|deactivated)",
+    "(?:block|suspend|deactivate)\\s+(?:your\\s+)?(?:account|aadhaar|upi)",
+    "service\\s+(?:will\\s+be\\s+)?(?:suspended|stopped|blocked)",
+    "(?:खाता|सेवा)\\s+(?:बंद|ब्लॉक)"
+  ]
+};
+
+const WA_PATTERN_WEIGHTS = {
+  "lottery_prize": 0.3,
+  "forward_chain": 0.15,
+  "fake_job": 0.3,
+  "apk_download": 0.35,
+  "govt_lure": 0.2,
+  "utility_threat": 0.25,
+  "group_invite": 0.1,
+  "otp_request": 0.4,
+  "account_threat": 0.3
+};
+
+const UPI_KNOWN_HANDLES = [
+  "okaxis",
+  "okhdfcbank",
+  "okicici",
+  "oksbi",
+  "ybl",
+  "ibl",
+  "axl",
+  "paytm",
+  "apl",
+  "upi",
+  "sbi",
+  "hdfcbank",
+  "icici",
+  "axisbank",
+  "pnb",
+  "boi",
+  "cnrb",
+  "kotak",
+  "yesbank",
+  "idfcbank",
+  "indus",
+  "fbl",
+  "aubank",
+  "rbl",
+  "freecharge",
+  "airtel",
+  "jio",
+  "postbank",
+  "ikwik",
+  "pthdfc",
+  "ptyes",
+  "ptsbi",
+  "ptaxis",
+  "barodampay",
+  "unionbank",
+  "uboi",
+  "federal",
+  "dbs",
+  "hsbc",
+  "okbizaxis"
+];
+
+const UPI_VPA_BAIT_WORDS = [
+  "refund",
+  "support",
+  "helpdesk",
+  "care",
+  "cashback",
+  "reward",
+  "lottery",
+  "prize",
+  "kyc",
+  "uidai",
+  "aadhaar",
+  "aadhar",
+  "npci",
+  "rbi",
+  "govt",
+  "tax"
+];
+
+const UPI_NOTE_BAIT_WORDS = [
+  "refund",
+  "cashback",
+  "reward",
+  "lottery",
+  "prize",
+  "kyc",
+  "claim",
+  "winner",
+  "verification"
+];
+
+const UPI_PAYEE_TERMS = [
+  "phonepe",
+  "paytm",
+  "gpay",
+  "google pay",
+  "npci",
+  "uidai",
+  "aadhaar",
+  "aadhar",
+  "rbi",
+  "customer care",
+  "helpline",
+  "refund",
+  "cashback",
+  "income tax"
+];
+
+const REPORTING_CHANNELS = [
+  {
+    "name": "National Cyber Crime Helpline",
+    "contact": "1930",
+    "url": "",
+    "when": "You already lost money (UPI / card / net banking). Call immediately — speed improves the chance of freezing the transfer."
+  },
+  {
+    "name": "National Cyber Crime Reporting Portal",
+    "contact": "cybercrime.gov.in",
+    "url": "https://cybercrime.gov.in",
+    "when": "File a formal complaint for any online fraud."
+  },
+  {
+    "name": "Sanchar Saathi · Chakshu",
+    "contact": "sancharsaathi.gov.in",
+    "url": "https://sancharsaathi.gov.in/sfc/",
+    "when": "Suspicious call / SMS / WhatsApp message and no money lost yet — report it so the number can be acted on."
+  },
+  {
+    "name": "Your bank / UPI app",
+    "contact": "In-app Report option or the number on your card",
+    "url": "",
+    "when": "Block cards or UPI access and raise a dispute right away."
+  }
+];
+
+const SENSITIVE_PARAMS = new Set([
+  "aadhaar",
+  "aadhaar_no",
+  "aadhar_no",
+  "account",
+  "auth",
+  "biometric",
+  "card",
+  "cvv",
+  "enrollment_id",
+  "enrolment_id",
+  "otp",
+  "otp_aadhaar",
+  "passwd",
+  "password",
+  "pin",
+  "secret",
+  "session",
+  "token",
+  "uid",
+  "upi_id"
+]);
+
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   scoring.js — Client-side heuristic phishing scorer (demo mode).
+
+   This is the BROWSER-ONLY fallback used when api.py is not running.
+   It re-implements a simplified, weighted-rule version of the real
+   Python feature extraction (see feature_extractor.py) so the dashboard
+   still gives a reasonable answer even with zero backend setup.
+
+   Edit THIS file for:
+     - Changing how a feature value is computed from a raw URL
+     - Changing scoring weights (which features matter most)
+     - Changing the suspicious/not-suspicious threshold for a feature
+
+   Do NOT edit THIS file for:
+     - Brand names, TLD lists, keyword lists → edit upi-config.js instead
+     - Real ML predictions → that logic lives entirely in feature_extractor.py
+       and trainer.py (Python backend) and is unrelated to this file
+     - DOM rendering, history, API calls → edit app.js instead
+
+   Depends on: upi-config.js (must be loaded BEFORE this file in index.html)
+   ════════════════════════════════════════════════════════════════════════ */
+
+// ── Heuristic feature extraction (client-side demo mode, 38 features) ──────
+
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, (_, i) =>
+      Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    return dp[m][n];
+  }
+
+  function computeFeatures(url) {
+    let u; try { u = new URL(url); } catch(e) {
+      u = { hostname:'', pathname:'/', protocol:'http:', port:'', search:'' };
+    }
+    const host    = u.hostname.toLowerCase();
+    const parts   = host.split('.');
+    const subdoms = parts.slice(0, -2).join(' ');
+    const path    = u.pathname.toLowerCase();
+    const full    = url.toLowerCase();
+
+    const digits   = (url.match(/\d/g)||[]).length;
+    const specials = (url.match(/[-_@%=?&]/g)||[]).length;
+    const urlLen   = url.length;
+    const dotCount = host.split('.').length - 1;
+    const subdepth = Math.max(0, parts.length - 2);
+    const digitRat = urlLen > 0 ? +(digits/urlLen).toFixed(4) : 0;
+    const entropy  = shannonEntropy(url);
+    const isIP     = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+    const hasAt    = host.includes('@');
+    const suspTLD  = SUSPICIOUS_TLDS.some(t => host.endsWith(t)) ? 1 : 0;
+    const brandSub = UPI_BRANDS.some(b => subdoms.includes(b)) ? 1 : 0;
+    const brandPath    = UPI_BRANDS.some(b => path.includes(b)) ? 1 : 0;
+    // brand in full hostname: uidai-update-kyc.xyz, phonepe-kyc.xyz etc.
+    const brandHostname = UPI_BRANDS.some(b => host.includes(b)) ? 1 : 0;
+    const hasHTTPS = u.protocol === 'https:' ? 1 : 0;
+    const kwCount  = PHISH_KEYWORDS.filter(k => full.includes(k)).length;
+
+    // A. New URL structure
+    const pathSegs     = path.split('/').filter(Boolean).length;
+    const dblSlash     = path.includes('//') ? 1 : 0;
+    const port         = u.port ? parseInt(u.port) : (hasHTTPS ? 443 : 80);
+    const nonStdPort   = (port !== 80 && port !== 443) ? 1 : 0;
+    const sp           = new URLSearchParams(u.search);
+    const sensitiveP   = [...sp.keys()].some(k => SENSITIVE_PARAMS.has(k.toLowerCase())) ? 1 : 0;
+
+    // B. New domain
+    const minEdit  = Math.min(...REAL_UPI_DOMAINS.map(d => levenshtein(host, d)));
+    const homograph= /[^\x00-\x7F]/.test(host) ? 1 : 0;
+    const punycode = host.includes('xn--') ? 1 : 0;
+
+    // C. SSL (simulated)
+    const certAge    = hasHTTPS && !suspTLD ? 180 : (hasHTTPS ? 8 : -1);
+    const selfSigned = hasHTTPS && suspTLD ? 1 : 0;
+    const trustedCA  = hasHTTPS && !suspTLD ? 1 : 0;
+
+    // D. HTML (simulated)
+    const formCount    = (brandSub || brandPath) ? 1 : 0;
+    const pwField      = (brandSub || kwCount >= 2) ? 1 : 0;
+    const hiddenField  = pwField ? 2 : 0;
+    const extRatio     = brandSub ? 0.65 : 0.1;
+    const htmlSim      = brandSub ? 0.45 : (brandPath ? 0.28 : 0.05);
+    const httpsMismatch= (hasHTTPS && brandSub) ? 1 : 0;
+    const faviconExt   = brandSub ? 1 : 0;
+
+    // E. Network (simulated)
+    const redirects   = suspTLD ? 2 : 0;
+    const hostingSusp = suspTLD && !hasHTTPS ? 1 : 0;
+    const asnSusp     = suspTLD ? 1 : 0;
+    const hasMX       = (!suspTLD && hasHTTPS) ? 1 : 0;
+
+    // F. OSINT (simulated)
+    const isShortener = URL_SHORTENERS.some(s => host===s || host.endsWith('.'+s)) ? 1 : 0;
+    const dnsTTL      = isShortener ? 60 : (suspTLD ? 150 : 3600);
+    const gsbFlag     = -1; // requires backend API key
+
+    return {
+      // A. URL Structure (13)
+      url_length: urlLen, dot_count: dotCount, digit_ratio: digitRat,
+      special_char_count: specials, subdomain_depth: subdepth,
+      has_ip_address: isIP?1:0, has_at_symbol: hasAt?1:0,
+      url_entropy: +entropy.toFixed(4), path_depth: pathSegs,
+      has_double_slash_in_path: dblSlash, has_non_standard_port: nonStdPort,
+      sensitive_query_params: sensitiveP, phish_keyword_count: kwCount,
+      // B. Domain (7)
+      domain_age_days: suspTLD?4:(brandSub?12:400),
+      suspicious_tld: suspTLD, brand_in_subdomain: brandSub, brand_in_path: brandPath,
+      min_brand_edit_distance: minEdit, has_homograph_chars: homograph,
+      is_punycode_domain: punycode,
+      // C. SSL (4)
+      has_https: hasHTTPS, cert_age_days: certAge,
+      is_self_signed: selfSigned, trusted_ca: trustedCA,
+      // D. HTML (7)
+      form_count: formCount, password_field_count: pwField,
+      hidden_field_count: hiddenField, external_resource_ratio: +extRatio.toFixed(4),
+      html_similarity_score: +htmlSim.toFixed(4),
+      https_form_mismatch: httpsMismatch, favicon_external: faviconExt,
+      // E. Network (4)
+      redirect_count: redirects, hosting_country_suspicious: hostingSusp,
+      asn_is_suspicious: asnSusp, has_mx_record: hasMX,
+      // F. OSINT (3)
+      is_url_shortener: isShortener, dns_ttl: dnsTTL, google_safe_browsing: gsbFlag,
+    };
+  }
+
+function shannonEntropy(str) {
+  const freq = {};
+  for (const c of str) freq[c] = (freq[c]||0) + 1;
+  let h = 0;
+  for (const f of Object.values(freq)) {
+    const p = f / str.length;
+    h -= p * Math.log2(p);
+  }
+  return h;
+}
+
+function scoreToProbability(features) {
+  let score = 0;
+  const w = {
+    suspicious_tld:             0.18,
+    brand_in_subdomain:         0.17,
+    html_similarity_score:      0.08,
+    is_self_signed:             0.07,
+    brand_in_path:              0.06,
+    has_at_symbol:              0.05,
+    has_ip_address:             0.05,
+    hosting_country_suspicious: 0.04,
+    password_field_count:       0.04,
+    redirect_count:             0.03,
+    is_url_shortener:           0.05,
+    google_safe_browsing:       0.10,
+    has_homograph_chars:        0.06,
+    is_punycode_domain:         0.05,
+    sensitive_query_params:     0.04,
+    https_form_mismatch:        0.05,
+    favicon_external:           0.04,
+    asn_is_suspicious:          0.04,
+  };
+  for (const [k, wt] of Object.entries(w)) {
+    const v = features[k];
+    if (wt > 0 && v > 0) score += v * wt;
+  }
+  if (features.domain_age_days >= 0 && features.domain_age_days < 30) score += 0.16;
+  if (features.has_https === 0) score += 0.04;
+  if (features.url_entropy > 4.5) score += 0.03;
+  if (features.phish_keyword_count >= 2) score += 0.04;
+  if (features.min_brand_edit_distance <= 3 && features.min_brand_edit_distance >= 0) score += 0.07;
+  if (features.dns_ttl >= 0 && features.dns_ttl < 300) score += 0.05;
+  if (features.has_mx_record === 0) score += 0.03;
+  return Math.min(Math.max(score, 0.01), 0.99);
+}
+
+function isSuspicious(name, val) {
+  const binaryBad = ['suspicious_tld','brand_in_subdomain','brand_in_path',
+    'has_ip_address','has_at_symbol','is_self_signed','hosting_country_suspicious',
+    'is_url_shortener','google_safe_browsing','has_homograph_chars','brand_in_hostname',
+    'is_punycode_domain','has_double_slash_in_path','has_non_standard_port',
+    'sensitive_query_params','https_form_mismatch','favicon_external','asn_is_suspicious'];
+  const binaryGoodIfZero = ['has_https','trusted_ca'];
+  const highBad = {
+    url_length:75, dot_count:3, digit_ratio:0.15, special_char_count:5,
+    subdomain_depth:2, url_entropy:4.5, path_depth:4, phish_keyword_count:2,
+    form_count:1, password_field_count:1, hidden_field_count:3,
+    external_resource_ratio:0.6, html_similarity_score:0.3, redirect_count:2,
+  };
+  if (binaryBad.includes(name))        return val === 1;
+  if (binaryGoodIfZero.includes(name)) return val === 0;
+  if (name === 'has_mx_record')        return val === 0;
+  if (name === 'domain_age_days')      return val >= 0 && val < 30;
+  if (name === 'cert_age_days')        return val >= 0 && val < 30;
+  if (name === 'dns_ttl')              return val >= 0 && val < 300;
+  if (name === 'min_brand_edit_distance') return val >= 0 && val <= 3;
+  if (name in highBad)                 return val >= highBad[name];
+  return false;
+}
+
+
+// ── Official-domain allowlist (mirrors allowlist.py) ─────────────────────
+// HTTPS + exact official host or real subdomain. Lookalikes such as
+// uidai.gov.in.evil.xyz, evil-uidai.gov.in, uidai.gov.in@evil.xyz all fail.
+function isOfficialDomain(url) {
+  if (!url) return false;
+  let u;
+  try { u = new URL(url.indexOf('://') !== -1 ? url : 'https://' + url); } catch (e) { return false; }
+  if (u.protocol !== 'https:') return false;
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  return OFFICIAL_DOMAINS.some(d => host === d || host.endsWith('.' + d));
+}
+
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   messages.js — browser rules for SMS / WhatsApp / UPI deep links (NO DOM).
+
+   Exact port of features/sms_features.py, features/deeplink_features.py and
+   features/whatsapp_features.py. tests/test_js_parity.py runs the same fixtures
+   through Python and this file and fails if the verdicts or reasons differ.
+
+   Edit THIS file for: how these checks are computed (weights, reason texts).
+   Do NOT edit for: word lists / patterns → config.py, then `make sync-js`.
+   Depends on: upi-config.js, scoring.js (isOfficialDomain).
+   ════════════════════════════════════════════════════════════════════════ */
+
+function _round4(x) { return Math.round(x * 10000) / 10000; }
+function _tokens(text) { return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); }
+function _containsTerm(text, term) {
+  const lower = text.toLowerCase();
+  if (term.indexOf(' ') !== -1) return lower.indexOf(term) !== -1;
+  return _tokens(lower).some(t => t === term || (term.length >= 5 && t.startsWith(term)));
+}
+function _dedupe(arr) { return Array.from(new Set(arr)); }
+
+const UPI_ADVICE = 'A UPI PIN is only needed to SEND money — you never enter it to receive money. ' +
+  'If you did not expect to pay, do not proceed; verify the payee directly.';
+const WA_ADVICE = 'Do not click links, install apps or share OTP/PIN. Real banks, UIDAI and UPI apps ' +
+  'never ask for these on WhatsApp. ' + UPI_ADVICE;
+
+/* ── SMS ─────────────────────────────────────────────────────────────── */
+function scoreSMSHeuristic(text, sender) {
+  text = text || ''; sender = sender || '';
+  const lower = text.toLowerCase();
+  const urgency = text ? _round4(SMS_URGENCY_PHRASES.filter(p => lower.includes(p)).length / SMS_URGENCY_PHRASES.length) : 0;
+  const hasUrl = (text && new RegExp(SMS_URL_PATTERN, 'i').test(text)) ? 1 : 0;
+  const up = sender.toUpperCase();
+  const spoofed = (sender && SMS_FAKE_SENDER_IDS.map(s => s.replace(/-+$/, '')).some(k => up.includes(k))) ? 1 : 0;
+  const kw = text ? SMS_PHISH_KEYWORDS.filter(k => lower.includes(k)).length : 0;
+  const brand = (text && UPI_BRANDS.some(b => lower.includes(b))) ? 1 : 0;
+  const asksOtp = (text && SMS_OTP_REQUEST_PATTERNS.some(p => new RegExp(p).test(lower))) ? 1 : 0;
+  const threat = (text && SMS_ACCOUNT_THREAT_PATTERNS.some(p => new RegExp(p).test(lower))) ? 1 : 0;
+  const regional = SMS_PHISH_KEYWORDS_HINDI.concat(SMS_PHISH_KEYWORDS_TAMIL, SMS_PHISH_KEYWORDS_TELUGU, SMS_PHISH_KEYWORDS_BENGALI);
+  const hing = (text && regional.length) ? _round4(regional.filter(k => text.includes(k)).length / regional.length) : 0;
+
+  const score = urgency * 0.12 + hasUrl * 0.18 + spoofed * 0.12 + Math.min(kw / 5, 1) * 0.08 +
+                brand * 0.08 + asksOtp * 0.28 + threat * 0.12 + hing * 0.08;
+  const risk = _round4(Math.min(score, 1));
+  const isPhish = risk >= 0.25;
+
+  const flags = [];
+  if (asksOtp) flags.push('Asks you to share/send an OTP — no real service ever does this');
+  if (threat) flags.push('Threatens to block/suspend your account, UPI or Aadhaar');
+  if (hasUrl) flags.push("Contains a link — real OTP/bank SMSes don't");
+  if (spoofed) flags.push('Sender ID imitates UIDAI/NPCI/a bank/a UPI app');
+  if (urgency > 0.1) flags.push('Uses urgency/pressure wording');
+  if (kw >= 2) flags.push('Contains several known phishing phrases');
+  if (hing > 0.05) flags.push('Contains phishing wording in Hindi/Tamil/Telugu/Bengali');
+
+  return {
+    sms_urgency_score: urgency, has_url_in_sms: hasUrl, sender_id_spoofed: spoofed,
+    sms_phish_keyword_count: kw, sms_impersonates_brand: brand, sms_asks_for_otp: asksOtp,
+    sms_threatens_account: threat, sms_hinglish_phish_score: hing,
+    sms_risk_score: risk, is_phishing_sms: isPhish,
+    flags: flags, risk_score: risk, is_phishing: isPhish, source: 'browser rules',
+  };
+}
+
+/* ── UPI deep links ──────────────────────────────────────────────────── */
+function extractUpiLinks(text) {
+  const m = (text || '').match(new RegExp(UPI_LINK_PATTERN, 'gi')) || [];
+  return m.map(s => s.replace(/[.,;)]+$/, ''));
+}
+
+function parseUpiLink(uri) {
+  uri = (uri || '').trim();
+  if (!uri.toLowerCase().startsWith('upi://')) return null;
+  const rest = uri.slice(6).split('#')[0];
+  const i = rest.indexOf('?');
+  const action = (i === -1 ? rest : rest.slice(0, i)).replace(/^\/+|\/+$/g, '').toLowerCase();
+  const query = i === -1 ? '' : rest.slice(i + 1);
+  const params = Object.create(null);
+  new URLSearchParams(query).forEach((v, k) => { k = k.toLowerCase(); if (!(k in params)) params[k] = v; });
+  return { action: action, params: params };
+}
+
+function analyseUpiLinkHeuristic(uri) {
+  const result = {
+    uri: uri, valid_upi_link: 0, action: '', payee_vpa: '', payee_name: '', amount: null,
+    currency: '', note: '', flags: [], risk_score: 0, risk_level: 'unknown',
+    is_suspicious_link: false, is_phishing: false, advice: UPI_ADVICE, source: 'browser rules',
+  };
+  const parsed = parseUpiLink(uri);
+  if (!parsed) { result.flags = ['Not a upi:// link']; return result; }
+
+  const action = parsed.action, p = parsed.params;
+  let score = 0; const flags = [];
+
+  const pa = (p.pa || '').trim();
+  if (!pa) { score += 0.30; flags.push('No payee UPI ID in the link'); }
+  else if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(pa)) { score += 0.30; flags.push('Payee UPI ID is malformed'); }
+  else {
+    const at = pa.lastIndexOf('@'), local = pa.slice(0, at), handle = pa.slice(at + 1);
+    if (UPI_KNOWN_HANDLES.indexOf(handle.toLowerCase()) === -1) {
+      score += 0.10; flags.push("Unrecognised UPI handle '@" + handle + "' (list is not exhaustive)");
+    }
+    if (UPI_VPA_BAIT_WORDS.some(w => _containsTerm(local, w))) {
+      score += 0.35; flags.push('Payee UPI ID contains scam-bait words (refund / support / kyc …)');
+    }
+  }
+  const pn = p.pn || '';
+  if (pn && UPI_PAYEE_TERMS.some(t => _containsTerm(pn, t))) { score += 0.25; flags.push('Payee name imitates a brand or authority'); }
+  const tn = p.tn || '';
+  if (tn && UPI_NOTE_BAIT_WORDS.some(w => _containsTerm(tn, w))) { score += 0.25; flags.push('Payment note uses refund / prize / KYC bait'); }
+
+  const am = (p.am || '').trim();
+  if (am) {
+    if (!/^\d+(?:\.\d{1,2})?$/.test(am)) { score += 0.15; flags.push('Amount is not a valid number'); }
+    else if (Number(am) >= 10000) { score += 0.20; flags.push('High pre-filled amount'); }
+    else if (Number(am) > 0) { score += 0.05; flags.push('Amount is pre-filled — check it is what you expect'); }
+  }
+  const cu = (p.cu || '').toUpperCase();
+  if (cu && cu !== 'INR') { score += 0.15; flags.push('Currency is ' + cu + ', not INR'); }
+  if (action === 'mandate') { score += 0.15; flags.push('Recurring auto-debit (mandate) link'); }
+  else if (action !== 'pay') { score += 0.15; flags.push("Unusual UPI action '" + action + "'"); }
+  if ('url' in p) { score += 0.05; flags.push('Link carries an extra URL parameter'); }
+
+  score = _round4(Math.min(score, 1));
+  Object.assign(result, {
+    valid_upi_link: 1, action: action, payee_vpa: pa, payee_name: pn, amount: am || null,
+    currency: cu, note: tn, flags: flags, risk_score: score,
+    risk_level: score < 0.25 ? 'low' : (score < 0.5 ? 'medium' : 'high'),
+    is_suspicious_link: score >= 0.40, is_phishing: score >= 0.40,
+  });
+  return result;
+}
+
+function scoreUpiFromText(text) {
+  const links = extractUpiLinks(text);
+  return analyseUpiLinkHeuristic(links.length ? links[0] : text);
+}
+
+/* ── WhatsApp ────────────────────────────────────────────────────────── */
+const WA_REASONS = {
+  lottery_prize: "Claims you won a prize/lottery — you can't win a contest you never entered",
+  forward_chain: 'Asks you to forward it to contacts/groups (chain-message pattern)',
+  fake_job: 'Work-from-home / easy daily-income offer (common task & investment scam)',
+  apk_download: 'Asks you to install an app file (.apk) — a common way to steal UPI/SMS access',
+  govt_lure: 'Uses a government-scheme or free-benefit lure (PM-Kisan, ration, free recharge…)',
+  utility_threat: 'Threatens disconnection/blocking or a fine (electricity, SIM, challan, parcel)',
+  group_invite: 'Pushes you into a WhatsApp/Telegram group',
+  otp_request: 'Asks you to share/send an OTP — no real service ever does this',
+  account_threat: 'Threatens to block/suspend your account, UPI or Aadhaar',
+};
+
+function extractUrls(text) {
+  const raw = (text || '').match(new RegExp(WA_URL_PATTERN, 'gi')) || [];
+  return raw.map(m => {
+    let u = m.replace(/[.,;:!?)]+$/, '');
+    if (!u.toLowerCase().startsWith('http')) u = 'https://' + u;
+    return u;
+  });
+}
+
+function _hostOf(url) { try { return new URL(url).hostname.toLowerCase(); } catch (e) { return ''; } }
+
+function linkRisk(url) {
+  if (isOfficialDomain(url)) return [0, []];
+  let risk = 0; const flags = [];
+  const host = _hostOf(url);
+  if (URL_SHORTENERS.some(s => host === s || host.endsWith('.' + s))) { risk += 0.40; flags.push('Link uses a URL shortener (hides the real destination)'); }
+  if (SUSPICIOUS_TLDS.some(t => host.endsWith(t))) { risk += 0.40; flags.push('Link uses a domain extension common in scams (.xyz, .tk, .top …)'); }
+  if (UPI_BRANDS.some(b => host.includes(b))) { risk += 0.30; flags.push('Link imitates a UPI/Aadhaar brand but is not the official site'); }
+  let u = null; try { u = new URL(url); } catch (e) { u = null; }
+  if (u && u.protocol === 'http:') { risk += 0.15; flags.push('Link is not HTTPS'); }
+  if (u && u.pathname.toLowerCase().endsWith('.apk')) { risk += 0.35; flags.push('Link downloads an app file (.apk)'); }
+  return [Math.min(risk, 1), flags];
+}
+
+function scoreWhatsAppHeuristic(text) {
+  text = text || '';
+  const sms = scoreSMSHeuristic(text, '');
+  const hits = {}; let points = 0;
+  Object.keys(WA_PATTERNS).forEach(n => {
+    const h = WA_PATTERNS[n].some(p => new RegExp(p, 'i').test(text)) ? 1 : 0;
+    hits[n] = h; if (h) points += WA_PATTERN_WEIGHTS[n];
+  });
+  const urls = extractUrls(text);
+  const linkInfo = urls.map(linkRisk);
+  const maxLink = linkInfo.reduce((m, x) => Math.max(m, x[0]), 0);
+  const upiLinks = extractUpiLinks(text);
+  const upiResults = upiLinks.map(analyseUpiLinkHeuristic);
+  const maxUpi = upiResults.reduce((m, r) => Math.max(m, r.risk_score), 0);
+
+  const score = _round4(Math.min(1, 0.5 * sms.sms_risk_score + points + 0.5 * maxLink + 0.5 * maxUpi));
+
+  let flags = Object.keys(WA_PATTERNS).filter(n => hits[n]).map(n => WA_REASONS[n]);
+  linkInfo.forEach(x => { flags = flags.concat(x[1]); });
+  upiResults.forEach(r => { if (r.risk_score >= 0.25) flags = flags.concat(r.flags.map(f => 'UPI link: ' + f)); });
+  if (sms.sms_urgency_score > 0.1) flags.push('Uses urgency/pressure wording');
+  if (sms.sms_phish_keyword_count >= 2) flags.push('Contains several known phishing phrases');
+  if (sms.sms_hinglish_phish_score > 0.05) flags.push('Contains phishing wording in Hindi/Tamil/Telugu/Bengali');
+
+  const result = {};
+  Object.keys(WA_PATTERNS).forEach(n => { result['wa_' + n] = hits[n]; });
+  Object.assign(result, {
+    sms_risk_score: sms.sms_risk_score, max_link_risk: _round4(maxLink), max_upi_risk: _round4(maxUpi),
+    urls_found: urls, upi_links_found: upiLinks,
+    whatsapp_risk_score: score, risk_score: score,
+    is_phishing_whatsapp: score >= WA_PHISHING_THRESHOLD, is_phishing: score >= WA_PHISHING_THRESHOLD,
+    flags: _dedupe(flags), advice: WA_ADVICE, source: 'browser rules',
+  });
+  return result;
+}
+
+/* ── One-click example messages for the UI ───────────────────────────── */
+const MSG_EXAMPLES = {
+  sms: [
+    { label: 'Aadhaar block + link', bad: true, sender: 'VK-UIDAI', text: 'URGENT: Your Aadhaar will be suspended immediately. Verify now at http://uidai-kyc.xyz to avoid account blocked.' },
+    { label: 'Asks to share OTP', bad: true, text: 'Your UPI OTP is 847291. Share OTP with our executive to complete KYC verification.' },
+    { label: 'Normal OTP SMS', bad: false, text: 'Your PhonePe OTP is 482910. Valid for 10 minutes. Do NOT share with anyone.' },
+  ],
+  whatsapp: [
+    { label: 'KBC lottery', bad: true, text: 'Congratulations! You have won Rs 25 lakh in KBC lucky draw. Forward this to 10 contacts and claim at http://kbc-prize.xyz' },
+    { label: 'Fake RTO challan .apk', bad: true, text: 'RTO challan pending. Download app http://rto-echallan.top/challan.apk and pay fine today' },
+    { label: 'Work-from-home task', bad: true, text: 'Work from home! Earn ₹5000 daily. Join telegram t.me/jobs123 now' },
+    { label: 'Friend sharing location', bad: false, text: 'Hi! Dinner at 8? Location https://maps.google.com/?q=cafe' },
+  ],
+  upi: [
+    { label: 'Fake refund link', bad: true, text: 'upi://pay?pa=phonepe.refund@ybl&pn=PhonePe%20Refund%20Dept&am=15000&tn=Refund%20claim' },
+    { label: 'Normal shop payment', bad: false, text: 'upi://pay?pa=merchant@okaxis&pn=Sharma%20Store&am=250&cu=INR&tn=Groceries' },
+  ],
+};
+
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   app.js — Application logic: API calls, DOM rendering, history, events.
+
+   Edit THIS file for:
+     - Changing how results are displayed (verdict card, feature table, chart)
+     - Changing how prediction history is saved/loaded/cleared
+     - Changing the API call to the Flask backend (api.py)
+     - Wiring up new buttons or input events
+
+   Do NOT edit THIS file for:
+     - Scoring logic / heuristic calculations → edit scoring.js instead
+     - Brand names, TLD lists, keyword lists → edit upi-config.js instead
+     - Colors, layout, spacing → edit style.css instead
+
+   Depends on:
+     - upi-config.js  (must be loaded first — provides API_BASE, etc.)
+     - scoring.js     (must be loaded second — provides computeFeatures(),
+                        scoreToProbability(), isSuspicious())
+   ════════════════════════════════════════════════════════════════════════ */
+
+// ── API call (falls back to heuristic) ──────────────────────────
+async function fetchPrediction(url) {
+  try {
+    const resp = await fetch(`${API_BASE}/predict`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url, fetch_html: false}),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) return await resp.json();
+  } catch(e) { /* backend not running — use heuristic */ }
+
+  const features = computeFeatures(url);
+  const prob     = scoreToProbability(features);
+  const official = isOfficialDomain(url);
+  const isPhish  = prob >= PHISH_THRESHOLD;
+  const flags    = Object.keys(features).filter(k => isSuspicious(k, features[k]));
+  const out = {
+    url, features, probability: +prob.toFixed(4),
+    is_phishing: isPhish,
+    label: isPhish ? 'PHISHING' : 'LEGITIMATE',
+    confidence: +(isPhish ? prob : 1 - prob).toFixed(4),
+    suspicious_flags: flags,
+    official_domain: official,
+    source: 'heuristic',
+  };
+  if (official && isPhish) {          // official HTTPS domains are never flagged
+    out.model_probability = out.probability;
+    out.probability = Math.min(out.probability, 0.05);
+    out.is_phishing = false; out.label = 'LEGITIMATE';
+    out.confidence = +(1 - out.probability).toFixed(4);
+    out.override = 'official_domain_allowlist';
+  }
+  return out;
+}
+
+// ── History ──────────────────────────────────────────────────────
+let history = JSON.parse(localStorage.getItem('upi_phish_history') || '[]');
+
+function saveHistory() {
+  localStorage.setItem('upi_phish_history', JSON.stringify(history.slice(0,30)));
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!history.length) {
+    el.innerHTML = '<div class="empty-history">No predictions yet — analyse a URL above.</div>';
+    return;
+  }
+  el.innerHTML = history.map((r,i) => `
+    <div class="history-row" onclick="reloadResult(${i})">
+      <span class="h-icon">${r.is_phishing ? '🚨' : '✅'}</span>
+      <span class="h-url">${escHtml(r.url)}</span>
+      <span class="h-label ${r.is_phishing ? 'phishing' : 'legit'}">${r.label}</span>
+      <span class="h-prob">${(r.probability*100).toFixed(1)}%</span>
+    </div>
+  `).join('');
+}
+
+function clearHistory() {
+  history = [];
+  saveHistory();
+  renderHistory();
+}
+
+function reloadResult(i) {
+  document.getElementById('urlInput').value = history[i].url;
+  renderResult(history[i]);
+}
+
+// ── Render result ────────────────────────────────────────────────
+function renderResult(r) {
+  const isPhish = r.is_phishing;
+  const prob    = r.probability;
+  const conf    = (r.confidence * 100).toFixed(1);
+  const flags   = r.suspicious_flags || [];
+  const feats   = r.features || {};
+
+  // Verdict card
+  document.getElementById('verdictCard').className = `verdict-card ${isPhish ? 'phishing' : 'legit'}`;
+  document.getElementById('verdictIcon').textContent  = isPhish ? '🚨' : '✅';
+  document.getElementById('verdictLabel').textContent = isPhish ? 'PHISHING' : 'LEGITIMATE';
+  document.getElementById('verdictProb').textContent  = `${(prob*100).toFixed(1)}%`;
+  document.getElementById('probBar').style.width      = `${prob*100}%`;
+
+  // Flags
+  const fw = document.getElementById('flagsWrap');
+  if (flags.length) {
+    fw.innerHTML = `<div class="flags-title">⚠ ${flags.length} risk signal${flags.length>1?'s':''} detected</div>` +
+      flags.slice(0,8).map(f => `<span class="flag-pill">${f}</span>`).join('');
+  } else {
+    fw.innerHTML = '<div class="flags-title" style="color:var(--safe)">✓ No suspicious signals</div>';
+  }
+
+  // Feature table
+  const COLS = Object.keys(feats);
+  document.getElementById('flagCount').textContent = flags.length ? `${flags.length} flagged` : '';
+  const tbody = document.getElementById('featureBody');
+  tbody.innerHTML = COLS.map(name => {
+    const val  = feats[name];
+    const susp = isSuspicious(name, val);
+    const disp = typeof val === 'number' && !Number.isInteger(val) ? val.toFixed(4) : (val === -1 ? 'N/A' : val);
+    return `<tr class="${susp ? 'warn' : ''}">
+      <td>${name}</td>
+      <td>${disp}</td>
+      <td class="${susp ? 'status-warn' : 'status-ok'}">${susp ? '⚠ suspicious' : '✓'}</td>
+    </tr>`;
+  }).join('');
+
+  // Bar chart
+  renderChart(feats, flags);
+  if (r.official_domain) {
+    document.getElementById('flagsWrap').innerHTML += '<div class="flags-title" style="color:var(--safe)">✓ Official domain (HTTPS allowlist)</div>';
+  }
+  document.getElementById('reportPanel').innerHTML = r.is_phishing ? reportPanelHTML() : '';
+
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderChart(feats, flags) {
+  const section = document.getElementById('chartSection');
+  // Normalise values to 0-1 for bar width
+  const maxes = {
+    url_length: 200, dot_count: 6, digit_ratio: 0.5, special_char_count: 15,
+    subdomain_depth: 4, url_entropy: 6, domain_age_days: 365, cert_age_days: 365,
+    form_count: 4, password_field_count: 3, hidden_field_count: 6,
+    external_resource_ratio: 1, html_similarity_score: 1, redirect_count: 5,
+    dns_ttl: 3600,   // new
+  };
+  const binaryKeys = ['has_ip_address','has_at_symbol','suspicious_tld','brand_in_subdomain',
+    'brand_in_path','has_https','is_self_signed','trusted_ca','hosting_country_suspicious'];
+
+  const rows = Object.entries(feats).map(([name, val]) => {
+    const susp  = isSuspicious(name, val);
+    const max   = maxes[name] || 1;
+    let pct;
+    if (binaryKeys.includes(name)) pct = val * 100;
+    else pct = Math.min((val < 0 ? 0 : val) / max * 100, 100);
+    const disp = typeof val === 'number' && !Number.isInteger(val) ? val.toFixed(3) : (val === -1 ? 'N/A' : val);
+    return `<div class="bar-row">
+      <span class="bar-name">${name}</span>
+      <div class="bar-track"><div class="bar-fill ${susp ? 'warn' : 'ok'}" style="width:${pct}%"></div></div>
+      <span class="bar-val">${disp}</span>
+    </div>`;
+  }).join('');
+
+  section.innerHTML = `<div class="chart-title">▸ Feature Values — <span style="color:var(--danger)">red = suspicious</span> / <span style="color:var(--safe)">green = OK</span></div>${rows}`;
+}
+
+// ── Main analyse function ────────────────────────────────────────
+async function analyse() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('Please enter a URL first.'); return; }
+
+  const btn = document.getElementById('analyseBtn');
+  const spin = document.getElementById('spinner');
+  btn.disabled = true;
+  btn.textContent = 'Analysing…';
+  spin.style.display = 'block';
+
+  try {
+    const result = await fetchPrediction(url);
+    history.unshift(result);
+    saveHistory();
+    renderHistory();
+    renderResult(result);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyse';
+    spin.style.display = 'none';
+  }
+}
+
+function fillAndAnalyse(url) {
+  document.getElementById('urlInput').value = url;
+  analyse();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+
+// ── Report panel (contacts come from config.py → REPORTING_CHANNELS) ──────
+function reportPanelHTML() {
+  const rows = REPORTING_CHANNELS.map(c => {
+    const contact = c.url
+      ? '<a href="' + escHtml(c.url) + '" target="_blank" rel="noopener">' + escHtml(c.contact) + '</a>'
+      : '<strong>' + escHtml(c.contact) + '</strong>';
+    return '<div class="report-row"><div class="report-name">' + escHtml(c.name) + ' — ' + contact +
+           '</div><div class="report-when">' + escHtml(c.when) + '</div></div>';
+  }).join('');
+  return '<div class="report-panel"><div class="report-title">🛟 What to do now</div>' + rows +
+         '<div class="report-note">Contacts were checked against the official portals when this tool was built — confirm on the portal if in doubt.</div></div>';
+}
+
+// ── Message / link checker (SMS · WhatsApp · UPI link) ────────────────────
+let MSG_MODE = 'sms';
+const MSG_HINTS = {
+  sms: 'Paste the SMS text. Add the sender ID if you have it (e.g. VK-UIDAI).',
+  whatsapp: 'Paste the forwarded WhatsApp message — links and upi:// links inside it are checked too.',
+  upi: 'Paste a upi://pay?… link (or the whole message that contains it).',
+};
+const MSG_ENDPOINT = { sms: '/analyse-sms', whatsapp: '/analyse-whatsapp', upi: '/analyse-upi-link' };
+
+function setMsgMode(mode) {
+  MSG_MODE = mode;
+  document.querySelectorAll('#msgTabs .msg-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('msgHint').textContent = MSG_HINTS[mode];
+  document.getElementById('msgSender').style.display = mode === 'sms' ? 'block' : 'none';
+  document.getElementById('msgResult').style.display = 'none';
+  const box = document.getElementById('msgExamples');
+  box.innerHTML = '';
+  MSG_EXAMPLES[mode].forEach(ex => {
+    const chip = document.createElement('span');
+    chip.className = 'example-chip' + (ex.bad ? ' phish' : '');
+    chip.textContent = (ex.bad ? '🚨 ' : '✅ ') + ex.label;
+    chip.onclick = () => {
+      document.getElementById('msgText').value = ex.text;
+      document.getElementById('msgSender').value = ex.sender || '';
+    };
+    box.appendChild(chip);
+  });
+}
+
+async function analyseMessage() {
+  const text = document.getElementById('msgText').value.trim();
+  const sender = document.getElementById('msgSender').value.trim();
+  if (!text) { alert('Paste a message or link first.'); return; }
+  let r = null;
+  try {
+    const body = MSG_MODE === 'sms' ? { text, sender } : { text };
+    const resp = await fetch(API_BASE + MSG_ENDPOINT[MSG_MODE], {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) { r = await resp.json(); r.source = 'backend rules'; }
+  } catch (e) { /* backend offline — use the in-browser port */ }
+  if (!r) {
+    r = MSG_MODE === 'sms' ? scoreSMSHeuristic(text, sender)
+      : MSG_MODE === 'whatsapp' ? scoreWhatsAppHeuristic(text)
+      : scoreUpiFromText(text);
+  }
+  renderMessageResult(r);
+}
+
+function renderMessageResult(r) {
+  const div = document.getElementById('msgResult');
+  const bad = !!r.is_phishing;
+  const warn = !bad && (r.flags || []).length > 0 && r.risk_score >= 0.2;
+  const pct = (r.risk_score * 100).toFixed(0);
+  const skip = ['flags', 'advice', 'urls_found', 'upi_links_found', 'uri', 'analysed_at', 'source',
+                'payee_vpa', 'payee_name', 'note', 'currency', 'amount', 'action'];
+  const rows = Object.keys(r).filter(k => skip.indexOf(k) === -1 && typeof r[k] !== 'object')
+    .map(k => '<tr><td>' + escHtml(k) + '</td><td>' + escHtml(String(r[k])) + '</td><td></td></tr>').join('');
+  const flags = (r.flags || []).map(f => '<li>' + escHtml(f) + '</li>').join('');
+  const meta = r.valid_upi_link
+    ? '<div class="msg-meta">Payee: <b>' + escHtml(r.payee_vpa) + '</b>' + (r.payee_name ? ' · Name: ' + escHtml(r.payee_name) : '') +
+      (r.amount ? ' · Amount: ' + escHtml(r.amount) : '') + '</div>' : '';
+  div.innerHTML =
+    '<div class="verdict-card ' + (bad ? 'phishing' : 'legit') + '" style="padding:18px;">' +
+      '<div class="verdict-icon">' + (bad ? '🚨' : (warn ? '⚠️' : '✅')) + '</div>' +
+      '<div class="verdict-label"' + (warn ? ' style="color:var(--warn)"' : '') + '>' + (bad ? 'LIKELY SCAM' : (warn ? 'SOME WARNING SIGNS' : 'NO STRONG SCAM SIGNALS')) + '</div>' +
+      '<div class="verdict-conf">Risk score: <strong>' + pct + '%</strong></div>' +
+      '<div class="prob-bar-wrap" style="width:100%;margin-top:8px;"><div class="prob-bar-track"><div class="prob-bar-fill" style="width:' + pct + '%"></div></div></div>' +
+    '</div>' + meta +
+    (flags ? '<ul class="msg-flags">' + flags + '</ul>' : '') +
+    (r.advice ? '<div class="msg-advice">' + escHtml(r.advice) + '</div>' : '') +
+    (bad ? reportPanelHTML() : '') +
+    '<div class="msg-disclaimer">Rule-based check (' + escHtml(r.source || 'rules') + ') — a clean result is not a guarantee of safety.</div>' +
+    '<details class="msg-details"><summary>Show raw signals</summary><div class="features-card"><table><tbody>' + rows + '</tbody></table></div></details>';
+  div.style.display = 'block';
+}
+
+// Enter key
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyse();
+});
+
+// Init
+renderHistory();
+setMsgMode('sms');
+
+</script>
+<script>
+/* api-status.js — green/grey status bar: is the Flask backend (api.py) running?
+   Edit THIS file for the status bar text/behaviour only. */
+async function checkAPI() {
+  const dot = document.getElementById('apiDot'), label = document.getElementById('apiLabel');
+  const mode = document.getElementById('apiMode'), badge = document.getElementById('modelBadge');
+  try {
+    const resp = await fetch(API_BASE + '/health', { signal: AbortSignal.timeout(2000) });
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    dot.className = 'api-dot online';
+    label.textContent = '✓ Backend connected — ' + (data.model || 'model loaded') +
+      (data.feature_set ? ' (' + data.feature_set + ' features: ' + data.n_features + ')' : '');
+    label.style.color = 'var(--safe)';
+    mode.textContent = 'URLs: trained ML model';
+    badge.textContent = 'ML model · UPI + Aadhaar';
+  } catch (e) {
+    dot.className = 'api-dot offline';
+    label.textContent = 'Backend offline — URL check uses browser heuristics';
+    label.style.color = 'var(--muted)';
+    mode.textContent = 'Mode: browser rules';
+    badge.textContent = 'Heuristic · UPI + Aadhaar';
+  }
+}
+checkAPI();
+setInterval(checkAPI, 10000);
+
+</script>
+</body>
+</html>

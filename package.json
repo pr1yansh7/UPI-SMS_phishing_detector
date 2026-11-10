@@ -1,0 +1,6 @@
+{
+  "name": "upi-sms-phishing-detector-ui-tests",
+  "private": true,
+  "description": "Dev-only: jsdom for tests/js/ui_test.js",
+  "devDependencies": { "jsdom": "^24.0.0" }
+}

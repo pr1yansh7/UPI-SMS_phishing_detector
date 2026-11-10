@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🛡️ UPI &amp; Aadhaar Phishing Detector</title>
+<!--
+  index.html — STRUCTURE ONLY (the single source for page layout).
+  START.html is GENERATED from this file + static/*.css|js by build_start.py (`make build`).
+
+    static/style.css      → colours, layout
+    static/upi-config.js  → AUTO-GENERATED from config.py (`make sync-js`) — don't hand-edit
+    static/scoring.js     → URL heuristic scoring (demo mode) + official-domain allowlist
+    static/messages.js    → SMS / WhatsApp / UPI-link rules (port of the Python analysers)
+    static/app.js         → rendering, history, message checker UI
+    static/api-status.js  → backend status bar
+  If you add/rename an element id here, update the matching getElementById() in app.js.
+-->
+<link rel="stylesheet" href="static/style.css"/>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-shield">🛡️</div>
+    <div class="brand">
+      <h1>UPI &amp; Aadhaar Phishing Detector</h1>
+      <p>39 URL features · SMS · WhatsApp · UPI links · India-specific</p>
+    </div>
+    <span class="header-badge" id="modelBadge">Heuristic mode</span>
+  </header>
+
+  <!-- API status bar -->
+  <div class="api-status-bar">
+    <div class="api-dot offline" id="apiDot"></div>
+    <span class="api-label" id="apiLabel">Checking for ML backend…</span>
+    <span class="api-mode"  id="apiMode"></span>
+  </div>
+
+  <!-- Setup guide -->
+  <details class="how-to-box">
+    <summary>How to enable full ML predictions (trained Random Forest)</summary>
+    <div class="how-to-steps">
+      <strong>Right now:</strong> Working in heuristic mode — scores URLs
+      using 38 weighted rules directly in your browser. No setup needed.<br><br>
+
+      <strong>Easiest:</strong> double-click <code>run.bat</code> (Windows) or run <code>./run.sh</code> (Mac/Linux) — it installs, trains, starts the backend and opens this page.<br><br>
+      <strong>Or manually (one-time, ~5 min):</strong><br>
+      1. Open a terminal in the project folder<br>
+      2. Run: <code>./setup.sh</code> &nbsp;(Mac/Linux) &nbsp;or&nbsp; <code>setup.bat</code> &nbsp;(Windows)<br>
+      3. Train: <code>python trainer.py --raw data/sample_urls.csv</code><br>
+      4. Start API: <code>python api.py</code> &nbsp;← keep this terminal open<br>
+      5. Refresh this page — status bar turns green automatically<br><br>
+
+      <strong>Every day after that:</strong><br>
+      <code>source venv/bin/activate &amp;&amp; python api.py</code> → refresh page
+    </div>
+  </details>
+
+  <!-- Input panel -->
+  <div class="input-panel">
+    <label class="input-label" for="urlInput">▸ Enter URL to analyse (UPI or Aadhaar)</label>
+    <div class="url-row">
+      <input class="url-input" id="urlInput" type="url"
+        placeholder="http://uidai-update-kyc.xyz  or  http://phonepe-kyc.xyz  or  https://uidai.gov.in/"
+        autocomplete="off" spellcheck="false"/>
+      <div class="spinner" id="spinner"></div>
+      <button class="btn-analyse" id="analyseBtn" onclick="analyse()">Analyse</button>
+    </div>
+
+    <div class="examples">
+      <!-- UPI phishing examples -->
+      <span class="example-group-label phish">UPI 🚨</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://phonepe-upi-kyc-verify.xyz/login?otp=123')">phonepe-upi-kyc-verify.xyz</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://gpay-reward-claim.online/cashback')">gpay-reward-claim.online</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://paytm-secure-update.click/otp-verify')">paytm-secure-update.click</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('https://bit.ly/3upiPhish')">bit.ly shortener</span>
+
+      <!-- UPI legit examples -->
+      <span class="example-group-label legit">UPI ✅</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://www.phonepe.com/')">phonepe.com</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://paytm.com/')">paytm.com</span>
+    </div>
+
+    <div class="examples" style="margin-top:8px;">
+      <!-- Aadhaar phishing examples -->
+      <span class="example-group-label phish">Aadhaar 🚨</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://uidai-update-kyc.xyz/verify')">uidai-update-kyc.xyz</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://aadhaar-card-download.tk/login')">aadhaar-card-download.tk</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://aadhar-link-mobile.online/otp')">aadhar-link-mobile.online</span>
+      <span class="example-chip phish" onclick="fillAndAnalyse('http://maadhaar-biometric.xyz/update')">maadhaar-biometric.xyz</span>
+
+      <!-- Aadhaar legit examples -->
+      <span class="example-group-label legit">Aadhaar ✅</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://uidai.gov.in/')">uidai.gov.in</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://resident.uidai.gov.in/')">resident.uidai.gov.in</span>
+      <span class="example-chip" onclick="fillAndAnalyse('https://digilocker.gov.in/')">digilocker.gov.in</span>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="result-grid fade-in">
+      <div class="verdict-card" id="verdictCard">
+        <div class="verdict-icon"  id="verdictIcon"></div>
+        <div class="verdict-label" id="verdictLabel"></div>
+        <div class="verdict-conf">
+          Phishing probability<br>
+          <strong id="verdictProb"></strong>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-bar-track">
+            <div class="prob-bar-fill" id="probBar" style="width:0%"></div>
+          </div>
+          <div class="prob-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+        </div>
+        <div class="flags-wrap" id="flagsWrap"></div>
+      </div>
+      <div class="features-card">
+        <div class="features-head">
+          <span>Feature Breakdown (38 features)</span>
+          <span id="flagCount" style="color:var(--warn)"></span>
+        </div>
+        <div class="features-scroll">
+          <table>
+            <thead><tr><th>Feature</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody id="featureBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="chart-section fade-in" id="chartSection"></div>
+    <div id="reportPanel"></div>
+  </div>
+
+
+  <!-- Message / link checker -->
+  <div class="history-section" style="margin-top:20px;">
+    <div class="history-head"><span>🔎 Check a message or link</span></div>
+    <div style="padding:20px;">
+      <div class="msg-tabs" id="msgTabs">
+        <button class="msg-tab active" data-mode="sms" onclick="setMsgMode('sms')">📱 SMS</button>
+        <button class="msg-tab" data-mode="whatsapp" onclick="setMsgMode('whatsapp')">💬 WhatsApp</button>
+        <button class="msg-tab" data-mode="upi" onclick="setMsgMode('upi')">💸 UPI link</button>
+      </div>
+      <div class="msg-hint" id="msgHint"></div>
+      <textarea id="msgText" class="msg-textarea" placeholder="Paste here…"></textarea>
+      <input id="msgSender" class="msg-sender" type="text" placeholder="Sender ID (optional, e.g. VK-UIDAI)"/>
+      <div class="examples" id="msgExamples"></div>
+      <button class="btn-analyse" style="margin-top:12px;" onclick="analyseMessage()">Check</button>
+      <div id="msgResult" style="margin-top:16px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="history-head">
+      <span>Recent Predictions</span>
+      <button class="clear-btn" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="historyList">
+      <div class="empty-history">No predictions yet — analyse a URL above.</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="static/upi-config.js"></script>
+<script src="static/scoring.js"></script>
+<script src="static/messages.js"></script>
+<script src="static/app.js"></script>
+<script src="static/api-status.js"></script>
+</body>
+</html>
